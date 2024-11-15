@@ -1,17 +1,17 @@
 <template>
   <div>  
   <h2>管理端资源功能</h2>
-    <el-card class="box-card" style="width: 600px;">
-    <el-button type="primary" @click="fetchResources">展示资源</el-button>
+    <el-card class="box-card" style="width: 1100px;">
     
     <el-table :data="resources" style="width: 100%;">
       <el-table-column prop="id" label="资源ID"></el-table-column>
       <el-table-column prop="name" label="资源名称"></el-table-column>
       <el-table-column label="操作" style="padding-left: 20px;">
         <template slot-scope="scope">
-              <el-button @click="editResources(scope.row.id)" type="text" size="small" style="color: blue; cursor: pointer;">编辑</el-button>
-              <el-button @click="publishResource(scope.row.id)" type="text" size="small" style="cursor: pointer;">发布</el-button>
-              <el-button @click="deleteResource(scope.row.id)" type="text" size="small" style="color: red; cursor: pointer;">删除</el-button>
+              <el-button @click="openResource(scope.row.id)"  style="color: green; cursor: pointer;">打开</el-button>
+              <el-button @click="editResources(scope.row.id)"  style="color: blue; cursor: pointer;">编辑</el-button>
+              <el-button @click="publishResource(scope.row.id)" style="color: #FF9000; cursor: pointer;">发布</el-button>
+              <el-button @click="deleteResource(scope.row.id)" style="color: red; cursor: pointer;">删除</el-button>
         </template>
 
       </el-table-column>
@@ -75,12 +75,22 @@ export default {
     // 展示资源
     async fetchResources() {
       try {
-        const response = await axios.post('https://qingteng-recruitment/resource',{code:1})
-        this.resources = response.data
+        const response = await axios.post('https://qingteng-recruitment/root/display_resource',{code:1})
+        this.resources = response.data.data //获取资源数据
       } catch(error) {
         console.log('获取资源失败',error)
       }
     },
+
+    // 打开资源  
+    openResource(id) {  
+      const resource = this.resources.find(item => item.id === id);  
+      if (resource && resource.fileUrl) {  
+        window.open(resource.fileUrl, '_blank');  
+      } else {  
+        console.error('文件未找到或没有可用的文件链接');  
+      }  
+    },  
 
     // 编辑资源
     async editResources(id) {
@@ -92,8 +102,8 @@ export default {
 
     // 文件拖拽
     handleFileChange(file) {
-      this.filelist.push(file)
-      this.form.file = file.row
+      this.filelist.push(file.file)
+      this.form.file = file.file.raw // 确保文件格式正确
     },
 
     // 更新资源
@@ -105,7 +115,7 @@ export default {
       }
       
       try {
-        const response = await axios.post(`https://qingteng-recruitment/resource_edit?id=${this.form.id}`,formData)
+        const response = await axios.post(`https://qingteng-recruitment/root/resource_edit?id=${this.form.id}`,formData)
         if(response===200) {
           this.dialogVisible = false
           this.fetchResources() // 刷新资源列表
@@ -117,14 +127,18 @@ export default {
 
     // 发布资源
     async publishResource(id) {
+      if (!this.form.file || !this.form.name) {  
+        console.error('请先选择文件及填写资源名');  
+        return;  
+      }  
       const payload = {
         name:this.form.name,
         file:this.form.file
       }
 
       try {
-        const response = await axios.post(`https://qingteng-recruitment/resource_put?id=${id}`,{content:payload})
-        if(response.status===200) {
+        const response = await axios.post(`https://qingteng-recruitment/root/resource_put?id=${id}`,payload)
+        if(response.data.code===200) {
           console.log('资源发布成功');
           this.fetchResources() // 刷新资源列表
         }
@@ -137,8 +151,8 @@ export default {
     // 删除资源
     async deleteResource(id) {
       try {
-          const response = await axios.post(`https://qingteng-recruitment/resource_delete?id=${id}`)
-          if(response.status===200) {
+          const response = await axios.post(`https://qingteng-recruitment/root/resource_delete?id=${id}`)
+          if(response.data.code===200) {
             console.log('资源删除成功')
             this.fetchResources() // 刷新资源列表 
           }
@@ -146,7 +160,10 @@ export default {
           console.error('删除资源失败',error);
           
       }
-    }
+    },
+    mounted() {  
+    this.fetchResources(); // 页面加载时获取资源  
+    }  
   }
 }
 </script>  
